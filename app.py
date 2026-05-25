@@ -101,7 +101,7 @@ if check_password():
                         session.headers.update({'User-Agent': 'Mozilla/5.0'})
                         reponse = session.get(infos[col_c])
                         # IMAGE AGGRANDIE ICI (width=400 au lieu de 200)
-                        st.image(reponse.content, width=400) 
+                        st.image(reponse.content, width=800) 
                         st.download_button("⬇️ Télécharger l'Asset", data=reponse.content, file_name=f"{sel_prod}.jpg", mime="image/jpeg")
                     except:
                         st.warning("Impossible d'afficher l'image. Vérifiez le partage du lien sur Drive.")

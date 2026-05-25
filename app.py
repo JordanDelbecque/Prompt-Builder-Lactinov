@@ -13,10 +13,38 @@ st.markdown("""
     .stApp {
         background-color: #FFFFFF;
     }
+    
     /* Couleur des titres en Bleu Promess */
     h1, h2, h3 {
         color: #0085C5 !important;
     }
+    
+    /* --- DESIGN DES LISTES DÉROULANTES (SELECTBOX) --- */
+    /* Force la bordure et le fond des listes en Bleu Promess */
+    div[data-baseweb="select"] {
+        border: 2px solid #0085C5 !important;
+        border-radius: 6px !important;
+        background-color: #FFFFFF !important;
+    }
+    
+    /* Force le texte à l'intérieur des listes en Bleu Promess */
+    div[data-baseweb="select"] div {
+        color: #0085C5 !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Force la petite flèche de droite à devenir Bleue */
+    div[data-baseweb="select"] svg {
+        fill: #0085C5 !important;
+    }
+    
+    /* Libellés au-dessus des listes (ex: "Produit Officiel") */
+    .stSelectbox label p {
+        color: #333333 !important;
+        font-weight: bold !important;
+    }
+    /* ------------------------------------------------- */
+
     /* Style du bouton de téléchargement (Bleu de base, Vert au survol) */
     .stDownloadButton > button {
         background-color: #0085C5 !important;
@@ -28,6 +56,7 @@ st.markdown("""
         background-color: #A8C96A !important;
         color: #FFFFFF !important;
     }
+    
     /* Style du bouton de connexion */
     .stButton > button {
         background-color: #0085C5 !important;
@@ -41,7 +70,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Le système de Sécurité (Corporate et sobre)
+# 3. Le système de Sécurité
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
@@ -51,7 +80,6 @@ def check_password():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            # Affichage du logo sur la page de connexion s'il existe
             if os.path.exists("logo.png"):
                 st.image("logo.png", width=250)
             else:
@@ -61,7 +89,7 @@ def check_password():
             pwd = st.text_input("Code d'accès collaborateur :", type="password")
             
             if st.button("Se connecter"):
-                if pwd == "PROMESS2026": # Ton mot de passe est ici
+                if pwd == "PROMESS2026":
                     st.session_state["password_correct"] = True
                     st.rerun()
                 else:
@@ -141,7 +169,6 @@ if check_password():
                 reponse = requests.get(lien_image, headers=headers)
                 st.image(reponse.content, width=200)
                 
-                # Le bouton aux couleurs de l'entreprise
                 st.download_button(
                     label="⬇️ Télécharger l'Asset Officiel",
                     data=reponse.content,
@@ -168,7 +195,7 @@ if check_password():
         prompt_final = (
             f"Utilise l'image fournie comme base visuelle absolue. "
             f"Tu es un photographe publicitaire professionnel. "
-            f"Contrainte stricte : Ne modifie en aucun cas le design, la forme ou les couleurs du produit.\n\n"
+            f"Contrainte stricte : Ne modifie en aucun cas le design, the forme ou les couleurs du produit.\n\n"
             f"Description : {clean(script_angle)}.\n"
             f"Ambiance : {clean(script_ambiance)}.\n"
             f"Scénario : {clean(script_scenario)}.\n"

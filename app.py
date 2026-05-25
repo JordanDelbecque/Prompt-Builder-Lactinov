@@ -10,23 +10,10 @@ st.set_page_config(page_title="Studio Promess", page_icon="🥛", layout="wide")
 # 2. CSS pour les boutons bleus et verts
 st.markdown("""
     <style>
-    .stButton > button {
-        background-color: #0085C5 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-    }
-    .stButton > button:hover {
-        background-color: #A8C96A !important;
-    }
-    .stDownloadButton > button {
-        background-color: #0085C5 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        width: 100%;
-    }
-    .stDownloadButton > button:hover {
-        background-color: #A8C96A !important;
-    }
+    .stButton > button { background-color: #0085C5 !important; color: #FFFFFF !important; border: none !important; }
+    .stButton > button:hover { background-color: #A8C96A !important; }
+    .stDownloadButton > button { background-color: #0085C5 !important; color: #FFFFFF !important; border: none !important; width: 100%; }
+    .stDownloadButton > button:hover { background-color: #A8C96A !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -43,10 +30,8 @@ def check_password():
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if os.path.exists("logo.png"):
-                st.image("logo.png", width=250)
-            else:
-                st.markdown("<h1>Studio Promess</h1>", unsafe_allow_html=True)
+            if os.path.exists("logo.png"): st.image("logo.png", width=250)
+            else: st.markdown("<h1 style='color:#0085C5;'>Studio Promess</h1>", unsafe_allow_html=True)
             st.markdown("### Portail Sécurisé")
             pwd = st.text_input("Code d'accès collaborateur :", type="password")
             if st.button("Se connecter"):
@@ -64,15 +49,14 @@ if check_password():
     # En-tête
     col_logo, col_titre = st.columns([1, 4])
     with col_logo:
-        if os.path.exists("logo.png"):
-            st.image("logo.png", width=150)
+        if os.path.exists("logo.png"): st.image("logo.png", width=150)
     with col_titre:
         st.title("Studio Créatif IA")
         st.markdown("**Générez vos campagnes visuelles en respectant la charte produit.**")
 
     st.markdown("---")
 
-    # Chargement des données
+    # Chargement des données AVEC NETTOYAGE EXTRÊME
     def load_data():
         fichiers = os.listdir()
         f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
@@ -82,8 +66,9 @@ if check_password():
             st.error("🚨 Base de données introuvable. Veuillez vérifier que DATA.csv et CONFIG.csv sont présents.")
             st.stop()
             
-        df_d = pd.read_csv(f_data)
-        df_c = pd.read_csv(f_config)
+        # Le secret est ici : dropna(how='all') supprime les lignes fantômes d'Excel !
+        df_d = pd.read_csv(f_data).dropna(how='all')
+        df_c = pd.read_csv(f_config).dropna(how='all')
         
         df_d.columns = [str(col).strip() for col in df_d.columns]
         df_c.columns = [str(col).strip() for col in df_c.columns]
@@ -92,16 +77,13 @@ if check_password():
 
     df_data, df_config = load_data()
 
+    # Listes déroulantes
     produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else ["Erreur"]
-    
     col_angles = 'Angles' if 'Angles' in df_config.columns else (df_config.columns[4] if len(df_config.columns) > 4 else 'Angles')
     angles = df_config[col_angles].dropna().unique().tolist() if col_angles in df_config.columns else []
-    
     ambiances = df_config['Ambiances'].dropna().unique().tolist() if 'Ambiances' in df_config.columns else []
-    
     col_format = 'Formats/Ratios)' if 'Formats/Ratios)' in df_config.columns else 'Formats/Ratios'
     formats = df_config[col_format].dropna().unique().tolist() if col_format in df_config.columns else []
-    
     styles = df_config['Styles Photo'].dropna().unique().tolist() if 'Styles Photo' in df_config.columns else []
     scenarios = df_config['Scénarios'].dropna().unique().tolist() if 'Scénarios' in df_config.columns else []
     personnages = df_config['Personnages'].dropna().unique().tolist() if 'Personnages' in df_config.columns else []
@@ -156,18 +138,30 @@ if check_password():
             st.subheader("🖼️ 2. Asset Visuel")
             
             if selected_produit and "Erreur" not in selected_produit:
-                infos_produit = df_data[df_data['Produit'] == selected_produit].iloc[0]
+                # Anti-crash : on s'assure que le produit existe bien dans la base de données
+                matches_produit = df_data[df_data['Produit'] == selected_produit]
                 
-                colonnes_images = {
-                    "Face": "Image FACE",
-                    "Profil": "Image PROFIL",
-                    "Dessus": "Image DESSUS",
-                    "45°": "Image 45°"
-                }
-                
-                colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
-                
-                if colonne_cible in df_data.columns:
-                    lien_image = infos_produit[colonne_cible]
-                else:
-                    lien
+                if not matches_produit.empty:
+                    infos_produit = matches_produit.iloc[0]
+                    
+                    colonnes_images = {
+                        "Face": "Image FACE",
+                        "Profil": "Image PROFIL",
+                        "Dessus": "Image DESSUS",
+                        "45°": "Image 45°"
+                    }
+                    
+                    colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
+                    lien_image = infos_produit[colonne_cible] if colonne_cible in df_data.columns else (infos_produit['Image FACE'] if 'Image FACE' in df_data.columns else None)
+                        
+                    if pd.notna(lien_image) and "http" in str(lien_image):
+                        try:
+                            headers = {'User-Agent': 'Mozilla/5.0'}
+                            reponse = requests.get(lien_image, headers=headers)
+                            st.image(reponse.content, width=200)
+                            
+                            st.download_button(
+                                label=f"⬇️ Télécharger la vue {selected_angle}",
+                                data=reponse.content,
+                                file_name=f"ASSET_{selected_produit.replace(' ', '_')}_{selected_angle}.jpg",
+                                mime="image/jpeg"

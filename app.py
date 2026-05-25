@@ -73,16 +73,20 @@ if check_password():
     st.markdown("---")
 
     # Chargement des données (SANS CACHE : MISE À JOUR INSTANTANÉE)
+    # Chargement des données (MODE DÉTECTIVE)
     def load_data():
-        fichiers = os.listdir()
-        f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
-        f_config = next((f for f in fichiers if "config" in f.lower() and f.endswith(".csv")), None)
+        fichiers = os.listdir() # L'application regarde tous les fichiers autour d'elle
+        
+        # Recherche ultra-tolérante (ignore les majuscules/minuscules)
+        f_data = next((f for f in fichiers if "data" in f.lower() and ".csv" in f.lower()), None)
+        f_config = next((f for f in fichiers if "config" in f.lower() and ".csv" in f.lower()), None)
+        
         if not f_data or not f_config:
-            st.error("🚨 Base de données introuvable.")
+            # Si ça plante, ça va afficher à l'écran TOUS les fichiers trouvés !
+            st.error(f"🚨 Fichiers introuvables. Voici ce que l'application voit dans le dossier : {', '.join(fichiers)}")
             st.stop()
+            
         return pd.read_csv(f_data), pd.read_csv(f_config)
-
-    df_data, df_config = load_data()
 
     # Nettoyage des colonnes (enlève les espaces invisibles)
     df_data.columns = df_data.columns.str.strip()

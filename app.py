@@ -72,8 +72,7 @@ if check_password():
 
     st.markdown("---")
 
-    # Chargement des données
-    @st.cache_data
+    # Chargement des données (SANS CACHE : MISE À JOUR INSTANTANÉE)
     def load_data():
         fichiers = os.listdir()
         f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
@@ -85,9 +84,17 @@ if check_password():
 
     df_data, df_config = load_data()
 
+    # Nettoyage des colonnes (enlève les espaces invisibles)
+    df_data.columns = df_data.columns.str.strip()
+    df_config.columns = df_config.columns.str.strip()
+
     # Extraction des listes de choix
     produits = df_data['Produit'].dropna().unique().tolist()
-    angles = df_config['Angles'].dropna().unique().tolist()
+    
+    # Sécurité au cas où la colonne Angles s'appelle autrement avec un espace
+    col_angles = 'Angles' if 'Angles' in df_config.columns else df_config.columns[4]
+    angles = df_config[col_angles].dropna().unique().tolist()
+    
     ambiances = df_config['Ambiances'].dropna().unique().tolist()
     col_format = 'Formats/Ratios)' if 'Formats/Ratios)' in df_config.columns else 'Formats/Ratios'
     formats = df_config[col_format].dropna().unique().tolist()
@@ -110,17 +117,15 @@ if check_password():
     # CREATION DES ONGLETS
     tab_studio, tab_guide = st.tabs(["📸 Studio Créatif", "📖 Guide d'utilisation"])
 
-    # ONGLET 2 : LE GUIDE (On le met en premier dans le code, mais il sera le 2e onglet)
     with tab_guide:
         st.subheader("Comment utiliser le Studio ?")
         st.markdown("""
         **Étape 1 : Configurer le Shoot**
         * Allez dans l'onglet *Studio Créatif*.
         * Utilisez les menus déroulants pour choisir votre produit et l'ambiance désirée.
-        * Vous manquez d'inspiration ? Cliquez sur le bouton **🎲 Surprends-moi !**
         
         **Étape 2 : Récupérer les éléments**
-        * Cliquez sur le bouton bleu **⬇️ Télécharger l'Asset Officiel** pour sauvegarder l'image du produit sur votre ordinateur.
+        * Cliquez sur le bouton bleu **⬇️ Télécharger l'Asset Officiel** pour sauvegarder l'image du produit.
         * Copiez l'intégralité du texte généré dans la boîte *Prompt Final*.
         
         **Étape 3 : Générer l'image**
@@ -129,7 +134,6 @@ if check_password():
         * Collez le texte juste en dessous de l'image et validez !
         """)
 
-    # ONGLET 1 : LE STUDIO PRINCIPAL
     with tab_studio:
         col1, col2 = st.columns([1, 1])
 
@@ -137,7 +141,6 @@ if check_password():
             st.subheader("🎛️ 1. Configuration du Shoot")
             st.button("🎲 Surprends-moi !", on_click=randomizer)
             
-            # Les menus avec la "clé" pour que le bouton aléatoire puisse les modifier
             selected_produit = st.selectbox("📦 Produit Officiel", produits, key="sel_produit")
             selected_angle = st.selectbox("📐 Angle Caméra", angles, key="sel_angle")
             selected_ambiance = st.selectbox("🏡 Set Design (Ambiance)", ambiances, key="sel_ambiance")
@@ -151,8 +154,22 @@ if check_password():
             st.subheader("🖼️ 2. Asset Visuel")
             
             infos_produit = df_data[df_data['Produit'] == selected_produit].iloc[0]
-            lien_image = infos_produit['Image FACE']
             
+            # --- LE NOUVEAU TRADUCTEUR MAGIQUE ---
+            colonnes_images = {
+                "Face": "Image FACE",
+                "Profil": "Image PROFIL",
+                "Dessus": "Image DESSUS",
+                "45°": "Image 45°"
+            }
+            
+            colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
+            
+            if colonne_cible in df_data.columns:
+                lien_image = infos_produit[colonne_cible]
+            else:
+                lien_image = infos_produit['Image FACE']
+                
             if pd.notna(lien_image) and "http" in str(lien_image):
                 try:
                     headers = {'User-Agent': 'Mozilla/5.0'}
@@ -160,54 +177,17 @@ if check_password():
                     st.image(reponse.content, width=200)
                     
                     st.download_button(
-                        label="⬇️ Télécharger l'Asset Officiel",
+                        label=f"⬇️ Télécharger la vue {selected_angle}",
                         data=reponse.content,
-                        file_name=f"ASSET_{selected_produit.replace(' ', '_')}.jpg",
+                        file_name=f"ASSET_{selected_produit.replace(' ', '_')}_{selected_angle}.jpg",
                         mime="image/jpeg"
                     )
                 except:
                     st.info("Aperçu bloqué par Google Drive.")
+            else:
+                st.warning(f"Aucune image trouvée pour l'angle {selected_angle}")
             
             st.subheader("📝 3. Prompt Final")
             
-            script_angle = df_config[df_config['Angles'] == selected_angle].iloc[0]['Scripts Angles']
-            script_ambiance = df_config[df_config['Ambiances'] == selected_ambiance].iloc[0]['Script Ambiances']
-            script_format = df_config[df_config[col_format] == selected_format].iloc[0]['Script Formats/Ratios']
-            script_style = df_config[df_config['Styles Photo'] == selected_style].iloc[0]['Scripts Styles Photos']
-            script_scenario = df_config[df_config['Scénarios'] == selected_scenario].iloc[0]['Scripts Scénarios']
-            script_personnage = df_config[df_config['Personnages'] == selected_personnage].iloc[0]['Script Personnages']
-            script_lumiere = df_config[df_config['Lumières'] == selected_lumiere].iloc[0]['Script Lumières']
-            
-            def clean(text):
-                return str(text).strip() if pd.notna(text) and str(text).lower() != 'nan' else ""
-
-            prompt_final = (
-                f"Utilise l'image fournie comme base visuelle absolue. Tu es un photographe publicitaire professionnel. "
-                f"Contrainte stricte : Ne modifie en aucun cas le design, la forme ou les couleurs du produit.\n\n"
-                f"Description : {clean(script_angle)}.\n"
-                f"Ambiance : {clean(script_ambiance)}.\n"
-                f"Scénario : {clean(script_scenario)}.\n"
-                f"Personnage : {clean(script_personnage)}.\n"
-                f"Lumière : {clean(script_lumiere)}.\n"
-                f"Style : {clean(script_style)}.\n\n"
-                f"Rendu : Photorealistic, 8k, highly detailed, sharp focus, commercial photography. "
-                f"Format : {clean(script_format)}"
-            )
-            
-            st.text_area("Copiez ce bloc de texte :", value=prompt_final, height=250)
-            
-            # Le bouton pour sauvegarder dans l'historique
-            if st.button("💾 Sauvegarder ce prompt dans l'historique"):
-                if prompt_final not in st.session_state["historique"]:
-                    st.session_state["historique"].insert(0, prompt_final)
-                    st.success("Prompt sauvegardé en bas de la page !")
-
-        # Affichage de l'historique en bas de l'onglet 1
-        if len(st.session_state["historique"]) > 0:
-            st.markdown("---")
-            st.subheader("🕰️ Historique de votre session")
-            st.write("Vos recettes sauvegardées apparaissent ici (jusqu'à la fermeture de la page).")
-            
-            # On affiche les 3 derniers prompts maximum pour ne pas surcharger
-            for i, prompt_sauvegarde in enumerate(st.session_state["historique"][:3]):
-                st.text_area(f"Sauvegarde #{len(st.session_state['historique']) - i}", value=prompt_sauvegarde, height=100, key=f"hist_{i}")
+            # Récupération sécurisée des scripts
+            script_angle = df_config[df_

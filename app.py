@@ -126,14 +126,43 @@ if check_password():
                             st.download_button("⬇️ Télécharger l'Asset", data=resp.content, file_name=f"{selected_produit}.jpg", mime="image/jpeg")
                         except: st.info("Aperçu indisponible.")
             
-            st.subheader("📝 3. Prompt Final")
-            def get_script(df, col_s, val_s, col_r):
-                if col_r in df.columns and val_s and col_s in df.columns:
-                    m = df[df[col_s] == val_s]
-                    return str(m.iloc[0][col_r]) if not m.empty else ""
+         st.subheader("📝 3. Prompt Final")
+            
+            # Fonction pour récupérer les scripts dans CONFIG.csv
+            def get_script(df, col_search, val_search, col_result):
+                if col_result in df.columns and val_search and col_search in df.columns:
+                    matches = df[df[col_search] == val_search]
+                    return str(matches.iloc[0][col_result]) if not matches.empty else ""
                 return ""
             
-            p_f = f"Base: Produit {selected_produit}. Description: {get_script(df_config, col_angles, selected_angle, 'Scripts Angles')}. Ambiance: {get_script(df_config, 'Ambiances', selected_ambiance, 'Script Ambiances')}."
-            st.text_area("Prompt:", value=p_f, height=200)
-            if st.button("💾 Sauvegarder"):
-                st.session_state["historique"].insert(0, p_f)
+            # Récupération de chaque catégorie
+            s_angle = get_script(df_config, col_angles, selected_angle, 'Scripts Angles')
+            s_ambiance = get_script(df_config, 'Ambiances', selected_ambiance, 'Script Ambiances')
+            s_format = get_script(df_config, col_format, selected_format, 'Script Formats/Ratios')
+            s_style = get_script(df_config, 'Styles Photo', selected_style, 'Scripts Styles Photos')
+            s_scenario = get_script(df_config, 'Scénarios', selected_scenario, 'Scripts Scénarios')
+            s_perso = get_script(df_config, 'Personnages', selected_personnage, 'Script Personnages')
+            s_lumiere = get_script(df_config, 'Lumières', selected_lumiere, 'Script Lumières')
+            
+            def clean(text): return str(text).strip() if pd.notna(text) and str(text).lower() != 'nan' else ""
+
+            # Construction du prompt complet
+            prompt_final = (
+                f"Photographe publicitaire professionnel. Contrainte stricte : Ne modifie jamais le design, la forme ou les couleurs du produit.\n\n"
+                f"Sujet : {selected_produit}\n"
+                f"Angle : {clean(s_angle)}\n"
+                f"Ambiance : {clean(s_ambiance)}\n"
+                f"Scénario : {clean(s_scenario)}\n"
+                f"Personnage : {clean(s_perso)}\n"
+                f"Lumière : {clean(s_lumiere)}\n"
+                f"Style : {clean(s_style)}\n"
+                f"Rendu : Photorealistic, 8k, highly detailed, sharp focus, commercial photography.\n"
+                f"Format : {clean(s_format)}"
+            )
+            
+            st.text_area("Copiez ce bloc de texte :", value=prompt_final, height=300)
+            
+            if st.button("💾 Sauvegarder ce prompt dans l'historique"):
+                if prompt_final not in st.session_state["historique"]:
+                    st.session_state["historique"].insert(0, prompt_final)
+                    st.success("Prompt sauvegardé en bas de la page !")

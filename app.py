@@ -29,8 +29,7 @@ def check_password():
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if os.path.exists("logo.png"): st.image("logo.png", width=250)
-            else: st.markdown("<h1 style='color:#0085C5;'>Studio Promess</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='color:#0085C5;'>Studio Promess</h1>", unsafe_allow_html=True)
             st.markdown("### Portail Sécurisé")
             pwd = st.text_input("Code d'accès collaborateur :", type="password")
             if st.button("Se connecter"):
@@ -44,14 +43,7 @@ def check_password():
 
 # 5. L'application principale
 if check_password():
-    
-    col_logo, col_titre = st.columns([1, 4])
-    with col_logo:
-        if os.path.exists("logo.png"): st.image("logo.png", width=150)
-    with col_titre:
-        st.title("Studio Créatif IA")
-        st.markdown("**Générez vos campagnes visuelles en respectant la charte produit.**")
-
+    st.title("Studio Créatif IA")
     st.markdown("---")
 
     def load_data():
@@ -59,7 +51,7 @@ if check_password():
         f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
         f_config = next((f for f in fichiers if "config" in f.lower() and f.endswith(".csv")), None)
         if not f_data or not f_config:
-            st.error("🚨 Base de données introuvable.")
+            st.error("🚨 Fichiers CSV introuvables.")
             st.stop()
         df_d = pd.read_csv(f_data).dropna(how='all')
         df_c = pd.read_csv(f_config).dropna(how='all')
@@ -69,100 +61,45 @@ if check_password():
 
     df_data, df_config = load_data()
 
-    produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else ["Erreur"]
-    col_angles = 'Angles' if 'Angles' in df_config.columns else (df_config.columns[4] if len(df_config.columns) > 4 else 'Angles')
-    angles = df_config[col_angles].dropna().unique().tolist() if col_angles in df_config.columns else []
+    # Extraction des listes (Sécurisé)
+    produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else []
+    angles = df_config['Angles'].dropna().unique().tolist() if 'Angles' in df_config.columns else []
     ambiances = df_config['Ambiances'].dropna().unique().tolist() if 'Ambiances' in df_config.columns else []
-    col_format = 'Formats/Ratios)' if 'Formats/Ratios)' in df_config.columns else 'Formats/Ratios'
-    formats = df_config[col_format].dropna().unique().tolist() if col_format in df_config.columns else []
+    formats = df_config['Formats/Ratios'].dropna().unique().tolist() if 'Formats/Ratios' in df_config.columns else []
     styles = df_config['Styles Photo'].dropna().unique().tolist() if 'Styles Photo' in df_config.columns else []
     scenarios = df_config['Scénarios'].dropna().unique().tolist() if 'Scénarios' in df_config.columns else []
     personnages = df_config['Personnages'].dropna().unique().tolist() if 'Personnages' in df_config.columns else []
     lumieres = df_config['Lumières'].dropna().unique().tolist() if 'Lumières' in df_config.columns else []
 
-    def randomizer():
-        if produits and "Erreur" not in produits[0]: st.session_state['sel_produit'] = random.choice(produits)
-        if angles: st.session_state['sel_angle'] = random.choice(angles)
-        if ambiances: st.session_state['sel_ambiance'] = random.choice(ambiances)
-        if formats: st.session_state['sel_format'] = random.choice(formats)
-        if styles: st.session_state['sel_style'] = random.choice(styles)
-        if scenarios: st.session_state['sel_scenario'] = random.choice(scenarios)
-        if personnages: st.session_state['sel_personnage'] = random.choice(personnages)
-        if lumieres: st.session_state['sel_lumiere'] = random.choice(lumieres)
-
     tab_studio, tab_guide = st.tabs(["📸 Studio Créatif", "📖 Guide d'utilisation"])
 
-    with tab_guide:
-        st.subheader("Comment utiliser le Studio ?")
-        st.markdown("- Configurez votre shoot dans l'onglet *Studio Créatif*.\n- Téléchargez l'asset avec le bouton dédié.\n- Copiez le prompt et utilisez-le dans votre IA.")
-
     with tab_studio:
-        col1, col2 = st.columns([1, 1])
+        col1, col2 = st.columns(2)
         with col1:
-            st.subheader("🎛️ 1. Configuration du Shoot")
-            st.button("🎲 Surprends-moi !", on_click=randomizer)
-            selected_produit = st.selectbox("📦 Produit Officiel", produits, key="sel_produit")
-            selected_angle = st.selectbox("📐 Angle Caméra", angles, key="sel_angle") if angles else None
-            selected_ambiance = st.selectbox("🏡 Set Design (Ambiance)", ambiances, key="sel_ambiance") if ambiances else None
-            selected_format = st.selectbox("📱 Format de sortie", formats, key="sel_format") if formats else None
-            selected_style = st.selectbox("🎨 Direction Artistique", styles, key="sel_style") if styles else None
-            selected_scenario = st.selectbox("🎬 Action / Scénario", scenarios, key="sel_scenario") if scenarios else None
-            selected_personnage = st.selectbox("👤 Casting", personnages, key="sel_personnage") if personnages else None
-            selected_lumiere = st.selectbox("💡 Éclairage Studio", lumieres, key="sel_lumiere") if lumieres else None
+            st.subheader("🎛️ 1. Configuration")
+            sel_prod = st.selectbox("Produit", produits)
+            sel_angle = st.selectbox("Angle", angles)
+            sel_amb = st.selectbox("Ambiance", ambiances)
+            sel_form = st.selectbox("Format", formats)
+            sel_style = st.selectbox("Style", styles)
+            sel_scen = st.selectbox("Scénario", scenarios)
+            sel_perso = st.selectbox("Casting", personnages)
+            sel_lum = st.selectbox("Lumière", lumieres)
 
         with col2:
             st.subheader("🖼️ 2. Asset Visuel")
-            if selected_produit and "Erreur" not in selected_produit:
-                matches = df_data[df_data['Produit'] == selected_produit]
-                if not matches.empty:
-                    infos = matches.iloc[0]
-                    colonnes_images = {"Face": "Image FACE", "Profil": "Image PROFIL", "Dessus": "Image DESSUS", "45°": "Image 45°"}
-                    col_cible = colonnes_images.get(selected_angle, "Image FACE")
-                    lien = infos[col_cible] if col_cible in df_data.columns else (infos['Image FACE'] if 'Image FACE' in df_data.columns else None)
-                    if pd.notna(lien) and "http" in str(lien):
-                        try:
-                            resp = requests.get(lien, headers={'User-Agent': 'Mozilla/5.0'})
-                            st.image(resp.content, width=200)
-                            st.download_button("⬇️ Télécharger l'Asset", data=resp.content, file_name=f"{selected_produit}.jpg", mime="image/jpeg")
-                        except: st.info("Aperçu indisponible.")
+            # Logique d'affichage image (simplifiée)
+            if sel_prod:
+                infos = df_data[df_data['Produit'] == sel_prod].iloc[0]
+                m_img = {"Face": "Image FACE", "Profil": "Image PROFIL", "Dessus": "Image DESSUS", "45°": "Image 45°"}
+                col_c = m_img.get(sel_angle, "Image FACE")
+                if col_c in infos:
+                    st.image(infos[col_c], width=200)
             
-         st.subheader("📝 3. Prompt Final")
+            st.subheader("📝 3. Prompt Final")
+            def get_s(df, col_s, val_s, col_r):
+                m = df[df[col_s] == val_s]
+                return str(m.iloc[0][col_r]) if not m.empty else ""
             
-            # Fonction pour récupérer les scripts dans CONFIG.csv
-            def get_script(df, col_search, val_search, col_result):
-                if col_result in df.columns and val_search and col_search in df.columns:
-                    matches = df[df[col_search] == val_search]
-                    return str(matches.iloc[0][col_result]) if not matches.empty else ""
-                return ""
-            
-            # Récupération de chaque catégorie
-            s_angle = get_script(df_config, col_angles, selected_angle, 'Scripts Angles')
-            s_ambiance = get_script(df_config, 'Ambiances', selected_ambiance, 'Script Ambiances')
-            s_format = get_script(df_config, col_format, selected_format, 'Script Formats/Ratios')
-            s_style = get_script(df_config, 'Styles Photo', selected_style, 'Scripts Styles Photos')
-            s_scenario = get_script(df_config, 'Scénarios', selected_scenario, 'Scripts Scénarios')
-            s_perso = get_script(df_config, 'Personnages', selected_personnage, 'Script Personnages')
-            s_lumiere = get_script(df_config, 'Lumières', selected_lumiere, 'Script Lumières')
-            
-            def clean(text): return str(text).strip() if pd.notna(text) and str(text).lower() != 'nan' else ""
-
-            # Construction du prompt complet
-            prompt_final = (
-                f"Photographe publicitaire professionnel. Contrainte stricte : Ne modifie jamais le design, la forme ou les couleurs du produit.\n\n"
-                f"Sujet : {selected_produit}\n"
-                f"Angle : {clean(s_angle)}\n"
-                f"Ambiance : {clean(s_ambiance)}\n"
-                f"Scénario : {clean(s_scenario)}\n"
-                f"Personnage : {clean(s_perso)}\n"
-                f"Lumière : {clean(s_lumiere)}\n"
-                f"Style : {clean(s_style)}\n"
-                f"Rendu : Photorealistic, 8k, highly detailed, sharp focus, commercial photography.\n"
-                f"Format : {clean(s_format)}"
-            )
-            
-            st.text_area("Copiez ce bloc de texte :", value=prompt_final, height=300)
-            
-            if st.button("💾 Sauvegarder ce prompt dans l'historique"):
-                if prompt_final not in st.session_state["historique"]:
-                    st.session_state["historique"].insert(0, prompt_final)
-                    st.success("Prompt sauvegardé en bas de la page !")
+            p_final = f"Produit: {sel_prod}. Angle: {get_s(df_config, 'Angles', sel_angle, 'Scripts Angles')}. Ambiance: {get_s(df_config, 'Ambiances', sel_amb, 'Script Ambiances')}. Scénario: {get_s(df_config, 'Scénarios', sel_scen, 'Scripts Scénarios')}. Lumière: {get_s(df_config, 'Lumières', sel_lum, 'Script Lumières')}."
+            st.text_area("Prompt:", value=p_final, height=250)

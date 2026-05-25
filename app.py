@@ -97,9 +97,13 @@ if check_password():
                 col_c = colonnes_images.get(sel_angle, "Image FACE")
                 if col_c in infos:
                     try:
-                        st.image(infos[col_c], width=200)
-                        st.download_button("⬇️ Télécharger l'Asset", data=requests.get(infos[col_c]).content, file_name=f"{sel_prod}.jpg", mime="image/jpeg")
-                    except: st.warning("Impossible d'afficher l'image.")
+                        session = requests.Session()
+                        session.headers.update({'User-Agent': 'Mozilla/5.0'})
+                        reponse = session.get(infos[col_c])
+                        st.image(reponse.content, width=200)
+                        st.download_button("⬇️ Télécharger l'Asset", data=reponse.content, file_name=f"{sel_prod}.jpg", mime="image/jpeg")
+                    except:
+                        st.warning("Impossible d'afficher l'image. Vérifiez le partage du lien sur Drive.")
             
             st.subheader("📝 3. Prompt Final")
             def get_s(df, col_s, val_s, col_r):
@@ -111,3 +115,9 @@ if check_password():
             if st.button("💾 Sauvegarder"):
                 st.session_state["historique"].insert(0, p_final)
                 st.success("Sauvegardé !")
+
+        if st.session_state["historique"]:
+            st.markdown("---")
+            st.subheader("🕰️ Historique")
+            for i, p in enumerate(st.session_state["historique"][:3]):
+                st.text_area(f"Sauvegarde {i+1}", value=p, height=100)

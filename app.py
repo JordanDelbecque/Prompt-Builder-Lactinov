@@ -30,7 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Initialisation de l'historique dans la mémoire
+# 3. Initialisation de l'historique
 if "historique" not in st.session_state:
     st.session_state["historique"] = []
 
@@ -72,7 +72,7 @@ if check_password():
 
     st.markdown("---")
 
-    # Chargement des données (MÉTHODE ULTRA-SÉCURISÉE)
+    # Chargement des données
     def load_data():
         fichiers = os.listdir()
         f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
@@ -85,17 +85,14 @@ if check_password():
         df_d = pd.read_csv(f_data)
         df_c = pd.read_csv(f_config)
         
-        # Nettoyage blindé des colonnes en pur Python (remplace le code qui plantait)
         df_d.columns = [str(col).strip() for col in df_d.columns]
         df_c.columns = [str(col).strip() for col in df_c.columns]
         
         return df_d, df_c
 
-    # On récupère les données
     df_data, df_config = load_data()
 
-    # Extraction sécurisée des listes (au cas où une colonne n'existe pas)
-    produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else ["Erreur: Colonne 'Produit' introuvable"]
+    produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else ["Erreur"]
     
     col_angles = 'Angles' if 'Angles' in df_config.columns else (df_config.columns[4] if len(df_config.columns) > 4 else 'Angles')
     angles = df_config[col_angles].dropna().unique().tolist() if col_angles in df_config.columns else []
@@ -110,7 +107,6 @@ if check_password():
     personnages = df_config['Personnages'].dropna().unique().tolist() if 'Personnages' in df_config.columns else []
     lumieres = df_config['Lumières'].dropna().unique().tolist() if 'Lumières' in df_config.columns else []
 
-    # Fonction pour le bouton "Surprends-moi"
     def randomizer():
         if produits and "Erreur" not in produits[0]: st.session_state['sel_produit'] = random.choice(produits)
         if angles: st.session_state['sel_angle'] = random.choice(angles)
@@ -121,7 +117,6 @@ if check_password():
         if personnages: st.session_state['sel_personnage'] = random.choice(personnages)
         if lumieres: st.session_state['sel_lumiere'] = random.choice(lumieres)
 
-    # CREATION DES ONGLETS
     tab_studio, tab_guide = st.tabs(["📸 Studio Créatif", "📖 Guide d'utilisation"])
 
     with tab_guide:
@@ -151,31 +146,4 @@ if check_password():
             selected_produit = st.selectbox("📦 Produit Officiel", produits, key="sel_produit")
             selected_angle = st.selectbox("📐 Angle Caméra", angles, key="sel_angle") if angles else None
             selected_ambiance = st.selectbox("🏡 Set Design (Ambiance)", ambiances, key="sel_ambiance") if ambiances else None
-            selected_format = st.selectbox("📱 Format de sortie", formats, key="sel_format") if formats else None
-            selected_style = st.selectbox("🎨 Direction Artistique", styles, key="sel_style") if styles else None
-            selected_scenario = st.selectbox("🎬 Action / Scénario", scenarios, key="sel_scenario") if scenarios else None
-            selected_personnage = st.selectbox("👤 Casting", personnages, key="sel_personnage") if personnages else None
-            selected_lumiere = st.selectbox("💡 Éclairage Studio", lumieres, key="sel_lumiere") if lumieres else None
-
-        with col2:
-            st.subheader("🖼️ 2. Asset Visuel")
-            
-            if selected_produit and "Erreur" not in selected_produit:
-                infos_produit = df_data[df_data['Produit'] == selected_produit].iloc[0]
-                
-                colonnes_images = {
-                    "Face": "Image FACE",
-                    "Profil": "Image PROFIL",
-                    "Dessus": "Image DESSUS",
-                    "45°": "Image 45°"
-                }
-                
-                colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
-                
-                if colonne_cible in df_data.columns:
-                    lien_image = infos_produit[colonne_cible]
-                else:
-                    lien_image = infos_produit['Image FACE'] if 'Image FACE' in df_data.columns else None
-                    
-                if pd.notna(lien_image) and "http" in str(lien_image):
-                    try:
+            selected_

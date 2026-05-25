@@ -71,6 +71,16 @@ with col2:
             headers = {'User-Agent': 'Mozilla/5.0'}
             reponse = requests.get(lien_image, headers=headers)
             st.image(reponse.content, width=200)
+            
+            # --- LE NOUVEAU BOUTON MAGIQUE ---
+            st.download_button(
+                label="⬇️ Télécharger l'image officielle",
+                data=reponse.content,
+                file_name=f"{selected_produit.replace(' ', '_')}.jpg",
+                mime="image/jpeg"
+            )
+            # ---------------------------------
+            
         except:
             st.info(f"🔗 [Lien de l'image source]({lien_image})")
     else:

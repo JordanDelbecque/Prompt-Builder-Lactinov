@@ -170,31 +170,4 @@ if check_password():
                 if colonne_cible in df_data.columns:
                     lien_image = infos_produit[colonne_cible]
                 else:
-                    lien_image = infos_produit['Image FACE'] if 'Image FACE' in df_data.columns else None
-                    
-                if pd.notna(lien_image) and "http" in str(lien_image):
-                    try:
-                        headers = {'User-Agent': 'Mozilla/5.0'}
-                        reponse = requests.get(lien_image, headers=headers)
-                        st.image(reponse.content, width=200)
-                        
-                        st.download_button(
-                            label=f"⬇️ Télécharger la vue {selected_angle}",
-                            data=reponse.content,
-                            file_name=f"ASSET_{selected_produit.replace(' ', '_')}_{selected_angle}.jpg",
-                            mime="image/jpeg"
-                        )
-                    except:
-                        st.info("Aperçu bloqué par Google Drive.")
-                else:
-                    st.warning(f"Aucune image trouvée pour l'angle {selected_angle}")
-            
-            st.subheader("📝 3. Prompt Final")
-            
-            script_angle = df_config[df_config[col_angles] == selected_angle].iloc[0]['Scripts Angles'] if 'Scripts Angles' in df_config.columns and selected_angle else ""
-            script_ambiance = df_config[df_config['Ambiances'] == selected_ambiance].iloc[0]['Script Ambiances'] if 'Script Ambiances' in df_config.columns and selected_ambiance else ""
-            script_format = df_config[df_config[col_format] == selected_format].iloc[0]['Script Formats/Ratios'] if 'Script Formats/Ratios' in df_config.columns and selected_format else ""
-            script_style = df_config[df_config['Styles Photo'] == selected_style].iloc[0]['Scripts Styles Photos'] if 'Scripts Styles Photos' in df_config.columns and selected_style else ""
-            script_scenario = df_config[df_config['Scénarios'] == selected_scenario].iloc[0]['Scripts Scénarios'] if 'Scripts Scénarios' in df_config.columns and selected_scenario else ""
-            script_personnage = df_config[df_config['Personnages'] == selected_personnage].iloc[0]['Script Personnages'] if 'Script Personnages' in df_config.columns and selected_personnage else ""
-            script_lumiere = df_config[df_config['Lumières'] == selected_lumiere].iloc[0]['Script Lumières'] if 'Script Lumières' in df_config.columns and selected_lumiere
+                    lien

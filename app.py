@@ -72,51 +72,54 @@ if check_password():
 
     st.markdown("---")
 
-    # Chargement des données (SANS CACHE : MISE À JOUR INSTANTANÉE)
-    # Chargement des données (MODE DÉTECTIVE)
+    # Chargement des données (MÉTHODE ULTRA-SÉCURISÉE)
     def load_data():
-        fichiers = os.listdir() # L'application regarde tous les fichiers autour d'elle
-        
-        # Recherche ultra-tolérante (ignore les majuscules/minuscules)
-        f_data = next((f for f in fichiers if "data" in f.lower() and ".csv" in f.lower()), None)
-        f_config = next((f for f in fichiers if "config" in f.lower() and ".csv" in f.lower()), None)
+        fichiers = os.listdir()
+        f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
+        f_config = next((f for f in fichiers if "config" in f.lower() and f.endswith(".csv")), None)
         
         if not f_data or not f_config:
-            # Si ça plante, ça va afficher à l'écran TOUS les fichiers trouvés !
-            st.error(f"🚨 Fichiers introuvables. Voici ce que l'application voit dans le dossier : {', '.join(fichiers)}")
+            st.error("🚨 Base de données introuvable. Veuillez vérifier que DATA.csv et CONFIG.csv sont présents.")
             st.stop()
             
-        return pd.read_csv(f_data), pd.read_csv(f_config)
+        df_d = pd.read_csv(f_data)
+        df_c = pd.read_csv(f_config)
+        
+        # Nettoyage blindé des colonnes en pur Python (remplace le code qui plantait)
+        df_d.columns = [str(col).strip() for col in df_d.columns]
+        df_c.columns = [str(col).strip() for col in df_c.columns]
+        
+        return df_d, df_c
 
-    # Nettoyage des colonnes (enlève les espaces invisibles)
-    df_data.columns = df_data.columns.str.strip()
-    df_config.columns = df_config.columns.str.strip()
+    # On récupère les données
+    df_data, df_config = load_data()
 
-    # Extraction des listes de choix
-    produits = df_data['Produit'].dropna().unique().tolist()
+    # Extraction sécurisée des listes (au cas où une colonne n'existe pas)
+    produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else ["Erreur: Colonne 'Produit' introuvable"]
     
-    # Sécurité au cas où la colonne Angles s'appelle autrement avec un espace
-    col_angles = 'Angles' if 'Angles' in df_config.columns else df_config.columns[4]
-    angles = df_config[col_angles].dropna().unique().tolist()
+    col_angles = 'Angles' if 'Angles' in df_config.columns else (df_config.columns[4] if len(df_config.columns) > 4 else 'Angles')
+    angles = df_config[col_angles].dropna().unique().tolist() if col_angles in df_config.columns else []
     
-    ambiances = df_config['Ambiances'].dropna().unique().tolist()
+    ambiances = df_config['Ambiances'].dropna().unique().tolist() if 'Ambiances' in df_config.columns else []
+    
     col_format = 'Formats/Ratios)' if 'Formats/Ratios)' in df_config.columns else 'Formats/Ratios'
-    formats = df_config[col_format].dropna().unique().tolist()
-    styles = df_config['Styles Photo'].dropna().unique().tolist()
-    scenarios = df_config['Scénarios'].dropna().unique().tolist()
-    personnages = df_config['Personnages'].dropna().unique().tolist()
-    lumieres = df_config['Lumières'].dropna().unique().tolist()
+    formats = df_config[col_format].dropna().unique().tolist() if col_format in df_config.columns else []
+    
+    styles = df_config['Styles Photo'].dropna().unique().tolist() if 'Styles Photo' in df_config.columns else []
+    scenarios = df_config['Scénarios'].dropna().unique().tolist() if 'Scénarios' in df_config.columns else []
+    personnages = df_config['Personnages'].dropna().unique().tolist() if 'Personnages' in df_config.columns else []
+    lumieres = df_config['Lumières'].dropna().unique().tolist() if 'Lumières' in df_config.columns else []
 
     # Fonction pour le bouton "Surprends-moi"
     def randomizer():
-        st.session_state['sel_produit'] = random.choice(produits)
-        st.session_state['sel_angle'] = random.choice(angles)
-        st.session_state['sel_ambiance'] = random.choice(ambiances)
-        st.session_state['sel_format'] = random.choice(formats)
-        st.session_state['sel_style'] = random.choice(styles)
-        st.session_state['sel_scenario'] = random.choice(scenarios)
-        st.session_state['sel_personnage'] = random.choice(personnages)
-        st.session_state['sel_lumiere'] = random.choice(lumieres)
+        if produits and "Erreur" not in produits[0]: st.session_state['sel_produit'] = random.choice(produits)
+        if angles: st.session_state['sel_angle'] = random.choice(angles)
+        if ambiances: st.session_state['sel_ambiance'] = random.choice(ambiances)
+        if formats: st.session_state['sel_format'] = random.choice(formats)
+        if styles: st.session_state['sel_style'] = random.choice(styles)
+        if scenarios: st.session_state['sel_scenario'] = random.choice(scenarios)
+        if personnages: st.session_state['sel_personnage'] = random.choice(personnages)
+        if lumieres: st.session_state['sel_lumiere'] = random.choice(lumieres)
 
     # CREATION DES ONGLETS
     tab_studio, tab_guide = st.tabs(["📸 Studio Créatif", "📖 Guide d'utilisation"])
@@ -146,88 +149,33 @@ if check_password():
             st.button("🎲 Surprends-moi !", on_click=randomizer)
             
             selected_produit = st.selectbox("📦 Produit Officiel", produits, key="sel_produit")
-            selected_angle = st.selectbox("📐 Angle Caméra", angles, key="sel_angle")
-            selected_ambiance = st.selectbox("🏡 Set Design (Ambiance)", ambiances, key="sel_ambiance")
-            selected_format = st.selectbox("📱 Format de sortie", formats, key="sel_format")
-            selected_style = st.selectbox("🎨 Direction Artistique", styles, key="sel_style")
-            selected_scenario = st.selectbox("🎬 Action / Scénario", scenarios, key="sel_scenario")
-            selected_personnage = st.selectbox("👤 Casting", personnages, key="sel_personnage")
-            selected_lumiere = st.selectbox("💡 Éclairage Studio", lumieres, key="sel_lumiere")
+            selected_angle = st.selectbox("📐 Angle Caméra", angles, key="sel_angle") if angles else None
+            selected_ambiance = st.selectbox("🏡 Set Design (Ambiance)", ambiances, key="sel_ambiance") if ambiances else None
+            selected_format = st.selectbox("📱 Format de sortie", formats, key="sel_format") if formats else None
+            selected_style = st.selectbox("🎨 Direction Artistique", styles, key="sel_style") if styles else None
+            selected_scenario = st.selectbox("🎬 Action / Scénario", scenarios, key="sel_scenario") if scenarios else None
+            selected_personnage = st.selectbox("👤 Casting", personnages, key="sel_personnage") if personnages else None
+            selected_lumiere = st.selectbox("💡 Éclairage Studio", lumieres, key="sel_lumiere") if lumieres else None
 
         with col2:
             st.subheader("🖼️ 2. Asset Visuel")
             
-            infos_produit = df_data[df_data['Produit'] == selected_produit].iloc[0]
-            
-            # --- LE NOUVEAU TRADUCTEUR MAGIQUE ---
-            colonnes_images = {
-                "Face": "Image FACE",
-                "Profil": "Image PROFIL",
-                "Dessus": "Image DESSUS",
-                "45°": "Image 45°"
-            }
-            
-            colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
-            
-            if colonne_cible in df_data.columns:
-                lien_image = infos_produit[colonne_cible]
-            else:
-                lien_image = infos_produit['Image FACE']
+            if selected_produit and "Erreur" not in selected_produit:
+                infos_produit = df_data[df_data['Produit'] == selected_produit].iloc[0]
                 
-            if pd.notna(lien_image) and "http" in str(lien_image):
-                try:
-                    headers = {'User-Agent': 'Mozilla/5.0'}
-                    reponse = requests.get(lien_image, headers=headers)
-                    st.image(reponse.content, width=200)
+                colonnes_images = {
+                    "Face": "Image FACE",
+                    "Profil": "Image PROFIL",
+                    "Dessus": "Image DESSUS",
+                    "45°": "Image 45°"
+                }
+                
+                colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
+                
+                if colonne_cible in df_data.columns:
+                    lien_image = infos_produit[colonne_cible]
+                else:
+                    lien_image = infos_produit['Image FACE'] if 'Image FACE' in df_data.columns else None
                     
-                    st.download_button(
-                        label=f"⬇️ Télécharger la vue {selected_angle}",
-                        data=reponse.content,
-                        file_name=f"ASSET_{selected_produit.replace(' ', '_')}_{selected_angle}.jpg",
-                        mime="image/jpeg"
-                    )
-                except:
-                    st.info("Aperçu bloqué par Google Drive.")
-            else:
-                st.warning(f"Aucune image trouvée pour l'angle {selected_angle}")
-            
-            st.subheader("📝 3. Prompt Final")
-            
-            # Récupération sécurisée des scripts
-            script_angle = df_config[df_config[col_angles] == selected_angle].iloc[0]['Scripts Angles'] if 'Scripts Angles' in df_config.columns else ""
-            script_ambiance = df_config[df_config['Ambiances'] == selected_ambiance].iloc[0]['Script Ambiances'] if 'Script Ambiances' in df_config.columns else ""
-            script_format = df_config[df_config[col_format] == selected_format].iloc[0]['Script Formats/Ratios'] if 'Script Formats/Ratios' in df_config.columns else ""
-            script_style = df_config[df_config['Styles Photo'] == selected_style].iloc[0]['Scripts Styles Photos'] if 'Scripts Styles Photos' in df_config.columns else ""
-            script_scenario = df_config[df_config['Scénarios'] == selected_scenario].iloc[0]['Scripts Scénarios'] if 'Scripts Scénarios' in df_config.columns else ""
-            script_personnage = df_config[df_config['Personnages'] == selected_personnage].iloc[0]['Script Personnages'] if 'Script Personnages' in df_config.columns else ""
-            script_lumiere = df_config[df_config['Lumières'] == selected_lumiere].iloc[0]['Script Lumières'] if 'Script Lumières' in df_config.columns else ""
-            
-            def clean(text):
-                return str(text).strip() if pd.notna(text) and str(text).lower() != 'nan' else ""
-
-            prompt_final = (
-                f"Utilise l'image fournie comme base visuelle absolue. Tu es un photographe publicitaire professionnel. "
-                f"Contrainte stricte : Ne modifie en aucun cas le design, la forme ou les couleurs du produit.\n\n"
-                f"Description : {clean(script_angle)}.\n"
-                f"Ambiance : {clean(script_ambiance)}.\n"
-                f"Scénario : {clean(script_scenario)}.\n"
-                f"Personnage : {clean(script_personnage)}.\n"
-                f"Lumière : {clean(script_lumiere)}.\n"
-                f"Style : {clean(script_style)}.\n\n"
-                f"Rendu : Photorealistic, 8k, highly detailed, sharp focus, commercial photography. "
-                f"Format : {clean(script_format)}"
-            )
-            
-            st.text_area("Copiez ce bloc de texte :", value=prompt_final, height=250)
-            
-            if st.button("💾 Sauvegarder ce prompt dans l'historique"):
-                if prompt_final not in st.session_state["historique"]:
-                    st.session_state["historique"].insert(0, prompt_final)
-                    st.success("Prompt sauvegardé en bas de la page !")
-
-        if len(st.session_state["historique"]) > 0:
-            st.markdown("---")
-            st.subheader("🕰️ Historique de votre session")
-            
-            for i, prompt_sauvegarde in enumerate(st.session_state["historique"][:3]):
-                st.text_area(f"Sauvegarde #{len(st.session_state['historique']) - i}", value=prompt_sauvegarde, height=100, key=f"hist_{i}")
+                if pd.notna(lien_image) and "http" in str(lien_image):
+                    try:

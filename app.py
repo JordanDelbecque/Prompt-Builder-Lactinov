@@ -190,4 +190,40 @@ if check_password():
             st.subheader("📝 3. Prompt Final")
             
             # Récupération sécurisée des scripts
-            script_angle = df_config[df_
+            script_angle = df_config[df_config[col_angles] == selected_angle].iloc[0]['Scripts Angles'] if 'Scripts Angles' in df_config.columns else ""
+            script_ambiance = df_config[df_config['Ambiances'] == selected_ambiance].iloc[0]['Script Ambiances'] if 'Script Ambiances' in df_config.columns else ""
+            script_format = df_config[df_config[col_format] == selected_format].iloc[0]['Script Formats/Ratios'] if 'Script Formats/Ratios' in df_config.columns else ""
+            script_style = df_config[df_config['Styles Photo'] == selected_style].iloc[0]['Scripts Styles Photos'] if 'Scripts Styles Photos' in df_config.columns else ""
+            script_scenario = df_config[df_config['Scénarios'] == selected_scenario].iloc[0]['Scripts Scénarios'] if 'Scripts Scénarios' in df_config.columns else ""
+            script_personnage = df_config[df_config['Personnages'] == selected_personnage].iloc[0]['Script Personnages'] if 'Script Personnages' in df_config.columns else ""
+            script_lumiere = df_config[df_config['Lumières'] == selected_lumiere].iloc[0]['Script Lumières'] if 'Script Lumières' in df_config.columns else ""
+            
+            def clean(text):
+                return str(text).strip() if pd.notna(text) and str(text).lower() != 'nan' else ""
+
+            prompt_final = (
+                f"Utilise l'image fournie comme base visuelle absolue. Tu es un photographe publicitaire professionnel. "
+                f"Contrainte stricte : Ne modifie en aucun cas le design, la forme ou les couleurs du produit.\n\n"
+                f"Description : {clean(script_angle)}.\n"
+                f"Ambiance : {clean(script_ambiance)}.\n"
+                f"Scénario : {clean(script_scenario)}.\n"
+                f"Personnage : {clean(script_personnage)}.\n"
+                f"Lumière : {clean(script_lumiere)}.\n"
+                f"Style : {clean(script_style)}.\n\n"
+                f"Rendu : Photorealistic, 8k, highly detailed, sharp focus, commercial photography. "
+                f"Format : {clean(script_format)}"
+            )
+            
+            st.text_area("Copiez ce bloc de texte :", value=prompt_final, height=250)
+            
+            if st.button("💾 Sauvegarder ce prompt dans l'historique"):
+                if prompt_final not in st.session_state["historique"]:
+                    st.session_state["historique"].insert(0, prompt_final)
+                    st.success("Prompt sauvegardé en bas de la page !")
+
+        if len(st.session_state["historique"]) > 0:
+            st.markdown("---")
+            st.subheader("🕰️ Historique de votre session")
+            
+            for i, prompt_sauvegarde in enumerate(st.session_state["historique"][:3]):
+                st.text_area(f"Sauvegarde #{len(st.session_state['historique']) - i}", value=prompt_sauvegarde, height=100, key=f"hist_{i}")

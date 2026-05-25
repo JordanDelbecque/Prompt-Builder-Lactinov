@@ -30,4 +30,84 @@ def check_password():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("<h1 style='color:#0085C5;'>Studio Promess</h1>", unsafe_allow_html=True)
-            st.markdown("### Portail
+            st.markdown("### Portail Sécurisé")
+            pwd = st.text_input("Code d'accès collaborateur :", type="password")
+            if st.button("Se connecter"):
+                if pwd == "PROMESS2026":
+                    st.session_state["password_correct"] = True
+                    st.rerun()
+                else:
+                    st.error("Code incorrect.")
+        return False
+    return True
+
+# 5. L'application principale
+if check_password():
+    st.title("Studio Créatif IA")
+    st.markdown("---")
+
+    def load_data():
+        fichiers = os.listdir()
+        f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
+        f_config = next((f for f in fichiers if "config" in f.lower() and f.endswith(".csv")), None)
+        if not f_data or not f_config:
+            st.error("🚨 Fichiers CSV introuvables.")
+            st.stop()
+        df_d = pd.read_csv(f_data).dropna(how='all')
+        df_c = pd.read_csv(f_config).dropna(how='all')
+        df_d.columns = [str(col).strip() for col in df_d.columns]
+        df_c.columns = [str(col).strip() for col in df_c.columns]
+        return df_d, df_c
+
+    df_data, df_config = load_data()
+
+    produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else []
+    angles = df_config['Angles'].dropna().unique().tolist() if 'Angles' in df_config.columns else []
+    ambiances = df_config['Ambiances'].dropna().unique().tolist() if 'Ambiances' in df_config.columns else []
+    formats = df_config['Formats/Ratios'].dropna().unique().tolist() if 'Formats/Ratios' in df_config.columns else []
+    styles = df_config['Styles Photo'].dropna().unique().tolist() if 'Styles Photo' in df_config.columns else []
+    scenarios = df_config['Scénarios'].dropna().unique().tolist() if 'Scénarios' in df_config.columns else []
+    personnages = df_config['Personnages'].dropna().unique().tolist() if 'Personnages' in df_config.columns else []
+    lumieres = df_config['Lumières'].dropna().unique().tolist() if 'Lumières' in df_config.columns else []
+
+    tab_studio, tab_guide = st.tabs(["📸 Studio Créatif", "📖 Guide d'utilisation"])
+
+    with tab_guide:
+        st.subheader("Comment utiliser le Studio ?")
+        st.markdown("- Configurez votre shoot dans l'onglet *Studio Créatif*.\n- Téléchargez l'asset avec le bouton dédié.\n- Copiez le prompt et utilisez-le dans votre IA.")
+
+    with tab_studio:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("🎛️ 1. Configuration")
+            sel_prod = st.selectbox("Produit", produits)
+            sel_angle = st.selectbox("Angle", angles)
+            sel_amb = st.selectbox("Ambiance", ambiances)
+            sel_form = st.selectbox("Format", formats)
+            sel_style = st.selectbox("Style", styles)
+            sel_scen = st.selectbox("Scénario", scenarios)
+            sel_perso = st.selectbox("Casting", personnages)
+            sel_lum = st.selectbox("Lumière", lumieres)
+
+        with col2:
+            st.subheader("🖼️ 2. Asset Visuel")
+            if sel_prod:
+                infos = df_data[df_data['Produit'] == sel_prod].iloc[0]
+                colonnes_images = {"Face": "Image FACE", "Profil": "Image PROFIL", "Dessus": "Image DESSUS", "45°": " Image 45°"}
+                col_c = colonnes_images.get(sel_angle, "Image FACE")
+                if col_c in infos:
+                    try:
+                        st.image(infos[col_c], width=200)
+                        st.download_button("⬇️ Télécharger l'Asset", data=requests.get(infos[col_c]).content, file_name=f"{sel_prod}.jpg", mime="image/jpeg")
+                    except: st.warning("Impossible d'afficher l'image.")
+            
+            st.subheader("📝 3. Prompt Final")
+            def get_s(df, col_s, val_s, col_r):
+                m = df[df[col_s] == val_s]
+                return str(m.iloc[0][col_r]) if not m.empty else ""
+            
+            p_final = f"Produit: {sel_prod}. Angle: {get_s(df_config, 'Angles', sel_angle, 'Scripts Angles')}. Ambiance: {get_s(df_config, 'Ambiances', sel_amb, 'Script Ambiances')}. Scénario: {get_s(df_config, 'Scénarios', sel_scen, 'Scripts Scénarios')}. Personnage: {get_s(df_config, 'Personnages', sel_perso, 'Script Personnages')}. Lumière: {get_s(df_config, 'Lumières', sel_lum, 'Script Lumières')}."
+            st.text_area("Prompt:", value=p_final, height=250)
+            if st.button("💾 Sauvegarder"):
+                st.session_state["historique"].insert(0, p_final)
+                st.success("Sauvegardé !")

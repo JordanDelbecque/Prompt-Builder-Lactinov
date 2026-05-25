@@ -1,17 +1,29 @@
 import streamlit as st
 import pandas as pd
 import requests
+import os
 
-# Configuration de la page (on utilise tout l'écran)
+# Configuration de la page
 st.set_page_config(page_title="Studio Promess", layout="wide")
 st.title("📸 Studio Créatif Promess")
 st.write("Générez vos prompts parfaits en quelques clics.")
 
-# Chargement des ingrédients (tes fichiers CSV)
+# Chargement intelligent des ingrédients (Insensible aux majuscules)
 @st.cache_data
 def load_data():
-    df_data = pd.read_csv("DATA.csv")
-    df_config = pd.read_csv("CONFIG.csv")
+    fichiers_presents = os.listdir()
+    
+    # Le robot cherche n'importe quel fichier contenant "data" ou "config"
+    fichier_data = next((f for f in fichiers_presents if "data" in f.lower() and f.endswith(".csv")), None)
+    fichier_config = next((f for f in fichiers_presents if "config" in f.lower() and f.endswith(".csv")), None)
+    
+    # Sécurité : Si le robot ne trouve rien, il nous dit ce qu'il voit
+    if not fichier_data or not fichier_config:
+        st.error(f"🚨 Fichiers CSV introuvables ! Voici les fichiers que le robot voit dans ton dossier : {fichiers_presents}")
+        st.stop()
+        
+    df_data = pd.read_csv(fichier_data)
+    df_config = pd.read_csv(fichier_config)
     return df_data, df_config
 
 df_data, df_config = load_data()
@@ -22,52 +34,43 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("🎛️ 1. Paramètres du Prompt")
     
-    # 1. Choix du produit (depuis DATA.csv)
+    # Menus déroulants
     produits = df_data['Produit'].dropna().unique()
     selected_produit = st.selectbox("📦 Choix du Produit", produits)
     
-    # 2. Choix de l'Angle
     angles = df_config['Angles'].dropna().unique()
     selected_angle = st.selectbox("📐 Angle de vue", angles)
     
-    # 3. Choix de l'Ambiance
     ambiances = df_config['Ambiances'].dropna().unique()
     selected_ambiance = st.selectbox("🏡 Ambiance", ambiances)
     
-    # 4. Choix du Format (on gère la petite parenthèse du fichier d'origine)
     col_format = 'Formats/Ratios)' if 'Formats/Ratios)' in df_config.columns else 'Formats/Ratios'
     formats = df_config[col_format].dropna().unique()
     selected_format = st.selectbox("📐 Format (Ratio)", formats)
     
-    # 5. Choix du Style Photo
     styles = df_config['Styles Photo'].dropna().unique()
     selected_style = st.selectbox("🎨 Style Photo", styles)
     
-    # 6. Choix du Scénario
     scenarios = df_config['Scénarios'].dropna().unique()
     selected_scenario = st.selectbox("🎬 Scénario", scenarios)
     
-    # 7. Choix du Personnage
     personnages = df_config['Personnages'].dropna().unique()
     selected_personnage = st.selectbox("👤 Personnage", personnages)
     
-    # 8. Choix de la Lumière
     lumieres = df_config['Lumières'].dropna().unique()
     selected_lumiere = st.selectbox("💡 Éclairage / Lumière", lumieres)
 
 with col2:
-    st.subheader("🖼 Honoraires & Aperçu")
+    st.subheader("🖼️ Aperçu du Produit")
     
-    # Recherche de l'image correspondante dans DATA.csv
     infos_produit = df_data[df_data['Produit'] == selected_produit].iloc[0]
     lien_image = infos_produit['Image FACE']
     
-    # Affichage de la photo du produit
     if pd.notna(lien_image) and "http" in str(lien_image):
         try:
             headers = {'User-Agent': 'Mozilla/5.0'}
             reponse = requests.get(lien_image, headers=headers)
-            st.image(reponse.content, width=200, caption=f"Aperçu de face : {selected_produit}")
+            st.image(reponse.content, width=200)
         except:
             st.info(f"🔗 [Lien de l'image source]({lien_image})")
     else:
@@ -75,7 +78,7 @@ with col2:
 
     st.subheader("📝 3. Prompt Final à copier")
     
-    # Extraction de chaque petit bout de texte correspondant aux choix
+    # Extraction des scripts
     script_angle = df_config[df_config['Angles'] == selected_angle].iloc[0]['Scripts Angles']
     script_ambiance = df_config[df_config['Ambiances'] == selected_ambiance].iloc[0]['Script Ambiances']
     script_format = df_config[df_config[col_format] == selected_format].iloc[0]['Script Formats/Ratios']
@@ -84,11 +87,10 @@ with col2:
     script_personnage = df_config[df_config['Personnages'] == selected_personnage].iloc[0]['Script Personnages']
     script_lumiere = df_config[df_config['Lumières'] == selected_lumiere].iloc[0]['Script Lumières']
     
-    # Petite fonction magique pour nettoyer les textes vides (nan)
+    # Nettoyage des textes vides
     def clean(text):
         return str(text).strip() if pd.notna(text) and str(text).lower() != 'nan' else ""
 
-    # Construction du gros prompt final articulé
     prompt_final = (
         f"Utilise l'image {lien_image} comme base visuelle absolue. "
         f"Tu es un photographe publicitaire professionnel. "
@@ -103,9 +105,9 @@ with col2:
         f"Format : {clean(script_format)}"
     )
     
-    # LA CORRECTION VISUELLE : Une grande boîte qui montre tout le texte d'un coup !
+    # La grande zone de texte lisible d'un coup
     st.text_area(
-        label="Sélectionne tout le texte ci-dessous pour ton IA (Gemini / Flow / Midjourney) :",
+        label="Sélectionne tout le texte ci-dessous pour ton IA :",
         value=prompt_final,
-        height=380 # Grande hauteur pour éviter la barre de défilement pénible
+        height=380
     )

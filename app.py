@@ -25,7 +25,6 @@ if "historique" not in st.session_state:
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
-
     if not st.session_state["password_correct"]:
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -46,7 +45,6 @@ def check_password():
 # 5. L'application principale
 if check_password():
     
-    # En-tête
     col_logo, col_titre = st.columns([1, 4])
     with col_logo:
         if os.path.exists("logo.png"): st.image("logo.png", width=150)
@@ -56,28 +54,21 @@ if check_password():
 
     st.markdown("---")
 
-    # Chargement des données AVEC NETTOYAGE EXTRÊME
     def load_data():
         fichiers = os.listdir()
         f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
         f_config = next((f for f in fichiers if "config" in f.lower() and f.endswith(".csv")), None)
-        
         if not f_data or not f_config:
-            st.error("🚨 Base de données introuvable. Veuillez vérifier que DATA.csv et CONFIG.csv sont présents.")
+            st.error("🚨 Base de données introuvable.")
             st.stop()
-            
-        # Le secret est ici : dropna(how='all') supprime les lignes fantômes d'Excel !
         df_d = pd.read_csv(f_data).dropna(how='all')
         df_c = pd.read_csv(f_config).dropna(how='all')
-        
         df_d.columns = [str(col).strip() for col in df_d.columns]
         df_c.columns = [str(col).strip() for col in df_c.columns]
-        
         return df_d, df_c
 
     df_data, df_config = load_data()
 
-    # Listes déroulantes
     produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else ["Erreur"]
     col_angles = 'Angles' if 'Angles' in df_config.columns else (df_config.columns[4] if len(df_config.columns) > 4 else 'Angles')
     angles = df_config[col_angles].dropna().unique().tolist() if col_angles in df_config.columns else []
@@ -103,28 +94,13 @@ if check_password():
 
     with tab_guide:
         st.subheader("Comment utiliser le Studio ?")
-        st.markdown("""
-        **Étape 1 : Configurer le Shoot**
-        * Allez dans l'onglet *Studio Créatif*.
-        * Utilisez les menus déroulants pour choisir votre produit et l'ambiance désirée.
-        
-        **Étape 2 : Récupérer les éléments**
-        * Cliquez sur le bouton bleu **⬇️ Télécharger l'Asset Officiel** pour sauvegarder l'image du produit.
-        * Copiez l'intégralité du texte généré dans la boîte *Prompt Final*.
-        
-        **Étape 3 : Générer l'image**
-        * Ouvrez votre outil IA (Google Flow, Midjourney, etc.).
-        * Importez l'image que vous venez de télécharger.
-        * Collez le texte juste en dessous de l'image et validez !
-        """)
+        st.markdown("- Configurez votre shoot dans l'onglet *Studio Créatif*.\n- Téléchargez l'asset avec le bouton dédié.\n- Copiez le prompt et utilisez-le dans votre IA.")
 
     with tab_studio:
         col1, col2 = st.columns([1, 1])
-
         with col1:
             st.subheader("🎛️ 1. Configuration du Shoot")
             st.button("🎲 Surprends-moi !", on_click=randomizer)
-            
             selected_produit = st.selectbox("📦 Produit Officiel", produits, key="sel_produit")
             selected_angle = st.selectbox("📐 Angle Caméra", angles, key="sel_angle") if angles else None
             selected_ambiance = st.selectbox("🏡 Set Design (Ambiance)", ambiances, key="sel_ambiance") if ambiances else None
@@ -136,32 +112,28 @@ if check_password():
 
         with col2:
             st.subheader("🖼️ 2. Asset Visuel")
-            
             if selected_produit and "Erreur" not in selected_produit:
-                # Anti-crash : on s'assure que le produit existe bien dans la base de données
-                matches_produit = df_data[df_data['Produit'] == selected_produit]
-                
-                if not matches_produit.empty:
-                    infos_produit = matches_produit.iloc[0]
-                    
-                    colonnes_images = {
-                        "Face": "Image FACE",
-                        "Profil": "Image PROFIL",
-                        "Dessus": "Image DESSUS",
-                        "45°": "Image 45°"
-                    }
-                    
-                    colonne_cible = colonnes_images.get(selected_angle, "Image FACE")
-                    lien_image = infos_produit[colonne_cible] if colonne_cible in df_data.columns else (infos_produit['Image FACE'] if 'Image FACE' in df_data.columns else None)
-                        
-                    if pd.notna(lien_image) and "http" in str(lien_image):
+                matches = df_data[df_data['Produit'] == selected_produit]
+                if not matches.empty:
+                    infos = matches.iloc[0]
+                    colonnes_images = {"Face": "Image FACE", "Profil": "Image PROFIL", "Dessus": "Image DESSUS", "45°": "Image 45°"}
+                    col_cible = colonnes_images.get(selected_angle, "Image FACE")
+                    lien = infos[col_cible] if col_cible in df_data.columns else (infos['Image FACE'] if 'Image FACE' in df_data.columns else None)
+                    if pd.notna(lien) and "http" in str(lien):
                         try:
-                            headers = {'User-Agent': 'Mozilla/5.0'}
-                            reponse = requests.get(lien_image, headers=headers)
-                            st.image(reponse.content, width=200)
-                            
-                            st.download_button(
-                                label=f"⬇️ Télécharger la vue {selected_angle}",
-                                data=reponse.content,
-                                file_name=f"ASSET_{selected_produit.replace(' ', '_')}_{selected_angle}.jpg",
-                                mime="image/jpeg"
+                            resp = requests.get(lien, headers={'User-Agent': 'Mozilla/5.0'})
+                            st.image(resp.content, width=200)
+                            st.download_button("⬇️ Télécharger l'Asset", data=resp.content, file_name=f"{selected_produit}.jpg", mime="image/jpeg")
+                        except: st.info("Aperçu indisponible.")
+            
+            st.subheader("📝 3. Prompt Final")
+            def get_script(df, col_s, val_s, col_r):
+                if col_r in df.columns and val_s and col_s in df.columns:
+                    m = df[df[col_s] == val_s]
+                    return str(m.iloc[0][col_r]) if not m.empty else ""
+                return ""
+            
+            p_f = f"Base: Produit {selected_produit}. Description: {get_script(df_config, col_angles, selected_angle, 'Scripts Angles')}. Ambiance: {get_script(df_config, 'Ambiances', selected_ambiance, 'Script Ambiances')}."
+            st.text_area("Prompt:", value=p_f, height=200)
+            if st.button("💾 Sauvegarder"):
+                st.session_state["historique"].insert(0, p_f)

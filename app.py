@@ -43,12 +43,6 @@ def check_password():
 # 5. L'application principale
 if check_password():
     st.title("Studio Créatif IA")
-    
-    mode_creation = st.radio(
-        "🎨 Mode de Création :", 
-        ["🥛 Classique PROMESS (Laitier, Sport & Santé)", "🎉 Événementiel & Créatif (Toutes les options)"], 
-        horizontal=True
-    )
     st.markdown("---")
 
     def load_data():
@@ -62,10 +56,10 @@ if check_password():
         
         df_d = pd.read_csv(f_data).dropna(how='all')
         
-        # Sécurité : Lecture du CSV (prend en charge les séparateurs virgules ET points-virgules)
+        # Sécurité : Lecture du CSV
         try:
             df_c = pd.read_csv(f_config, sep=',').dropna(how='all')
-            if len(df_c.columns) < 3: # Si ça a échoué (1 seule colonne), on essaie le point-virgule
+            if len(df_c.columns) < 3: 
                 df_c = pd.read_csv(f_config, sep=';').dropna(how='all')
         except:
             df_c = pd.read_csv(f_config, sep=';').dropna(how='all')
@@ -73,7 +67,7 @@ if check_password():
         df_d.columns = [str(col).strip() for col in df_d.columns]
         df_c.columns = [str(col).strip() for col in df_c.columns]
         
-        # ULTRA IMPORTANT : Nettoyage des espaces invisibles dans toutes les cellules
+        # Nettoyage des espaces invisibles
         for col in df_c.columns:
             df_c[col] = df_c[col].astype(str).str.strip()
             
@@ -81,30 +75,16 @@ if check_password():
 
     df_data, df_config = load_data()
 
-    # Liste des mots "Créatifs" à masquer en mode Classique
-    mots_creatifs = [
-        "cannes", "met gala", "coachella", "f1", "hivernal", "venise", "samba", "rio", 
-        "burning man", "shibuya", "cyberpunk", "paparazzis", "holi", "vitesse", 
-        "confettis", "pop art", "néon", "diwali", "oktoberfest", "carnaval"
-    ]
-
+    # Fonction pour extraire les options, avec le choix "--- Aucun ---" par défaut
     def get_options(cat):
-        toutes_options = df_config[df_config['Categorie'] == cat]['Option'].unique().tolist()
-        
-        if "Classique" in mode_creation:
-            options_propres = []
-            for opt in toutes_options:
-                if not any(mot in opt.lower() for mot in mots_creatifs):
-                    options_propres.append(opt)
-            return options_propres
-        
-        return toutes_options
+        options = df_config[df_config['Categorie'] == cat]['Option'].unique().tolist()
+        return ["--- Aucun ---"] + options
 
     produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else []
-    angles = get_options('Angles')
-    ambiances = get_options('Ambiances')
     formats = get_options('Formats/Ratios')
+    angles = get_options('Angles')
     styles = get_options('Styles Photo')
+    ambiances = get_options('Ambiances')
     scenarios = get_options('Scénarios')
     personnages = get_options('Personnages')
     lumieres = get_options('Lumières')
@@ -113,7 +93,7 @@ if check_password():
 
     with tab_guide:
         st.subheader("Comment utiliser le Studio ?")
-        st.markdown("- Sélectionnez d'abord votre mode de création en haut de page.\n- Configurez votre shoot dans l'onglet *Studio Créatif*.\n- Téléchargez l'asset avec le bouton dédié.\n- Copiez le prompt et utilisez-le dans votre IA.")
+        st.markdown("- Sélectionnez votre produit et les options souhaitées.\n- Si vous ne voulez pas d'une option (ex: pas de personnage), laissez sur **--- Aucun ---**.\n- Téléchargez l'asset avec le bouton dédié.\n- Copiez le prompt et utilisez-le dans votre IA.")
 
     with tab_studio:
         col1, col2 = st.columns(2)
@@ -150,23 +130,25 @@ if check_password():
                 match = df_config[(df_config['Categorie'] == cat) & (df_config['Option'] == opt)]
                 return str(match.iloc[0]['Script']) if not match.empty else ""
             
-            if sel_angle and sel_amb and sel_scen and sel_perso and sel_lum and sel_form and sel_style:
-                # TOUTES les variables (y compris Formats et Styles) sont maintenant ajoutées au texte !
-                p_final = (f"Produit: {sel_prod}. "
-                           f"Format: {get_s('Formats/Ratios', sel_form)}. "
-                           f"Style Photo: {get_s('Styles Photo', sel_style)}. "
-                           f"Angle: {get_s('Angles', sel_angle)}. "
-                           f"Ambiance: {get_s('Ambiances', sel_amb)}. "
-                           f"Scénario: {get_s('Scénarios', sel_scen)}. "
-                           f"Personnage: {get_s('Personnages', sel_perso)}. "
-                           f"Lumière: {get_s('Lumières', sel_lum)}.")
+            if sel_prod:
+                # Construction dynamique du prompt (n'ajoute que les options sélectionnées)
+                elements_prompt = [f"Produit: {sel_prod}"]
+                
+                if sel_form != "--- Aucun ---": elements_prompt.append(f"Format: {get_s('Formats/Ratios', sel_form)}")
+                if sel_style != "--- Aucun ---": elements_prompt.append(f"Style Photo: {get_s('Styles Photo', sel_style)}")
+                if sel_angle != "--- Aucun ---": elements_prompt.append(f"Angle: {get_s('Angles', sel_angle)}")
+                if sel_amb != "--- Aucun ---": elements_prompt.append(f"Ambiance: {get_s('Ambiances', sel_amb)}")
+                if sel_scen != "--- Aucun ---": elements_prompt.append(f"Scénario: {get_s('Scénarios', sel_scen)}")
+                if sel_perso != "--- Aucun ---": elements_prompt.append(f"Personnage: {get_s('Personnages', sel_perso)}")
+                if sel_lum != "--- Aucun ---": elements_prompt.append(f"Lumière: {get_s('Lumières', sel_lum)}")
+
+                # On assemble les éléments avec un point et un espace
+                p_final = ". ".join(elements_prompt) + "."
                 
                 st.text_area("Prompt:", value=p_final, height=250)
                 if st.button("💾 Sauvegarder"):
                     st.session_state["historique"].insert(0, p_final)
                     st.success("Sauvegardé !")
-            else:
-                st.info("Veuillez sélectionner une option dans chaque catégorie.")
 
         if st.session_state["historique"]:
             st.markdown("---")

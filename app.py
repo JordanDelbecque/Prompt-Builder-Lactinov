@@ -43,6 +43,13 @@ def check_password():
 # 5. L'application principale
 if check_password():
     st.title("Studio Créatif IA")
+    
+    # --- NOUVEAUTÉ : LE SÉLECTEUR DE MODE ---
+    mode_creation = st.radio(
+        "🎨 Mode de Création :", 
+        ["🥛 Classique PROMESS (Laitier, Sport & Santé)", "🎉 Événementiel & Créatif (Toutes les options)"], 
+        horizontal=True
+    )
     st.markdown("---")
 
     def load_data():
@@ -60,11 +67,29 @@ if check_password():
 
     df_data, df_config = load_data()
 
-    # Fonction pour extraire les options d'une catégorie
-    def get_options(cat):
-        return df_config[df_config['Categorie'] == cat]['Option'].unique().tolist()
+    # Liste des mots "Créatifs" à masquer en mode Classique
+    mots_creatifs = [
+        "cannes", "met gala", "coachella", "f1", "hivernal", "venise", "samba", "rio", 
+        "burning man", "shibuya", "cyberpunk", "paparazzis", "holi", "vitesse", 
+        "confettis", "pop art", "néon", "diwali", "oktoberfest"
+    ]
 
-    # Extraction des listes depuis le nouveau format
+    # Fonction pour extraire les options avec le filtre intelligent
+    def get_options(cat):
+        toutes_options = df_config[df_config['Categorie'] == cat]['Option'].unique().tolist()
+        
+        # Si on est en mode "Classique", on retire les options événementielles
+        if "Classique" in mode_creation:
+            options_propres = []
+            for opt in toutes_options:
+                # Si aucun des mots créatifs n'est dans le nom de l'option, on la garde
+                if not any(mot in opt.lower() for mot in mots_creatifs):
+                    options_propres.append(opt)
+            return options_propres
+        
+        # Si on est en mode "Événementiel", on renvoie tout
+        return toutes_options
+
     produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else []
     angles = get_options('Angles')
     ambiances = get_options('Ambiances')
@@ -75,6 +100,10 @@ if check_password():
     lumieres = get_options('Lumières')
 
     tab_studio, tab_guide = st.tabs(["📸 Studio Créatif", "📖 Guide d'utilisation"])
+
+    with tab_guide:
+        st.subheader("Comment utiliser le Studio ?")
+        st.markdown("- Sélectionnez d'abord votre mode de création en haut de page.\n- Configurez votre shoot dans l'onglet *Studio Créatif*.\n- Téléchargez l'asset avec le bouton dédié.\n- Copiez le prompt et utilisez-le dans votre IA.")
 
     with tab_studio:
         col1, col2 = st.columns(2)
@@ -103,23 +132,32 @@ if check_password():
                         st.image(reponse.content, width=400)
                         st.download_button("⬇️ Télécharger l'Asset", data=reponse.content, file_name=f"{sel_prod}.jpg", mime="image/jpeg")
                     except:
-                        st.warning("Impossible d'afficher l'image.")
+                        st.warning("Impossible d'afficher l'image. Vérifiez le lien Drive.")
             
             st.subheader("📝 3. Prompt Final")
             
-            # Fonction pour récupérer le script selon la catégorie et l'option
             def get_s(cat, opt):
                 match = df_config[(df_config['Categorie'] == cat) & (df_config['Option'] == opt)]
                 return str(match.iloc[0]['Script']) if not match.empty else ""
             
-            p_final = (f"Produit: {sel_prod}. "
-                       f"Angle: {get_s('Angles', sel_angle)}. "
-                       f"Ambiance: {get_s('Ambiances', sel_amb)}. "
-                       f"Scénario: {get_s('Scénarios', sel_scen)}. "
-                       f"Personnage: {get_s('Personnages', sel_perso)}. "
-                       f"Lumière: {get_s('Lumières', sel_lum)}.")
-            
-            st.text_area("Prompt:", value=p_final, height=250)
-            if st.button("💾 Sauvegarder"):
-                st.session_state["historique"].insert(0, p_final)
-                st.success("Sauvegardé !")
+            # Gestion d'erreur au cas où la sélection est vide suite au changement de mode
+            if sel_angle and sel_amb and sel_scen and sel_perso and sel_lum:
+                p_final = (f"Produit: {sel_prod}. "
+                           f"Angle: {get_s('Angles', sel_angle)}. "
+                           f"Ambiance: {get_s('Ambiances', sel_amb)}. "
+                           f"Scénario: {get_s('Scénarios', sel_scen)}. "
+                           f"Personnage: {get_s('Personnages', sel_perso)}. "
+                           f"Lumière: {get_s('Lumières', sel_lum)}.")
+                
+                st.text_area("Prompt:", value=p_final, height=250)
+                if st.button("💾 Sauvegarder"):
+                    st.session_state["historique"].insert(0, p_final)
+                    st.success("Sauvegardé !")
+            else:
+                st.info("Veuillez sélectionner une option dans chaque catégorie.")
+
+        if st.session_state["historique"]:
+            st.markdown("---")
+            st.subheader("🕰️ Historique")
+            for i, p in enumerate(st.session_state["historique"][:3]):
+                st.text_area(f"Sauvegarde {i+1}", value=p, height=100)

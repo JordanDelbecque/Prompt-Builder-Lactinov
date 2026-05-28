@@ -44,7 +44,6 @@ def check_password():
 if check_password():
     st.title("Studio Créatif IA")
     
-    # --- NOUVEAUTÉ : LE SÉLECTEUR DE MODE ---
     mode_creation = st.radio(
         "🎨 Mode de Création :", 
         ["🥛 Classique PROMESS (Laitier, Sport & Santé)", "🎉 Événementiel & Créatif (Toutes les options)"], 
@@ -56,13 +55,28 @@ if check_password():
         fichiers = os.listdir()
         f_data = next((f for f in fichiers if "data" in f.lower() and f.endswith(".csv")), None)
         f_config = next((f for f in fichiers if "config" in f.lower() and f.endswith(".csv")), None)
+        
         if not f_data or not f_config:
             st.error("🚨 Fichiers CSV introuvables.")
             st.stop()
+        
         df_d = pd.read_csv(f_data).dropna(how='all')
-        df_c = pd.read_csv(f_config).dropna(how='all')
+        
+        # Sécurité : Lecture du CSV (prend en charge les séparateurs virgules ET points-virgules)
+        try:
+            df_c = pd.read_csv(f_config, sep=',').dropna(how='all')
+            if len(df_c.columns) < 3: # Si ça a échoué (1 seule colonne), on essaie le point-virgule
+                df_c = pd.read_csv(f_config, sep=';').dropna(how='all')
+        except:
+            df_c = pd.read_csv(f_config, sep=';').dropna(how='all')
+
         df_d.columns = [str(col).strip() for col in df_d.columns]
         df_c.columns = [str(col).strip() for col in df_c.columns]
+        
+        # ULTRA IMPORTANT : Nettoyage des espaces invisibles dans toutes les cellules
+        for col in df_c.columns:
+            df_c[col] = df_c[col].astype(str).str.strip()
+            
         return df_d, df_c
 
     df_data, df_config = load_data()
@@ -71,23 +85,19 @@ if check_password():
     mots_creatifs = [
         "cannes", "met gala", "coachella", "f1", "hivernal", "venise", "samba", "rio", 
         "burning man", "shibuya", "cyberpunk", "paparazzis", "holi", "vitesse", 
-        "confettis", "pop art", "néon", "diwali", "oktoberfest"
+        "confettis", "pop art", "néon", "diwali", "oktoberfest", "carnaval"
     ]
 
-    # Fonction pour extraire les options avec le filtre intelligent
     def get_options(cat):
         toutes_options = df_config[df_config['Categorie'] == cat]['Option'].unique().tolist()
         
-        # Si on est en mode "Classique", on retire les options événementielles
         if "Classique" in mode_creation:
             options_propres = []
             for opt in toutes_options:
-                # Si aucun des mots créatifs n'est dans le nom de l'option, on la garde
                 if not any(mot in opt.lower() for mot in mots_creatifs):
                     options_propres.append(opt)
             return options_propres
         
-        # Si on est en mode "Événementiel", on renvoie tout
         return toutes_options
 
     produits = df_data['Produit'].dropna().unique().tolist() if 'Produit' in df_data.columns else []
@@ -110,10 +120,10 @@ if check_password():
         with col1:
             st.subheader("🎛️ 1. Configuration")
             sel_prod = st.selectbox("Produit", produits)
-            sel_angle = st.selectbox("Angle", angles)
-            sel_amb = st.selectbox("Ambiance", ambiances)
             sel_form = st.selectbox("Format", formats)
+            sel_angle = st.selectbox("Angle", angles)
             sel_style = st.selectbox("Style", styles)
+            sel_amb = st.selectbox("Ambiance", ambiances)
             sel_scen = st.selectbox("Scénario", scenarios)
             sel_perso = st.selectbox("Casting", personnages)
             sel_lum = st.selectbox("Lumière", lumieres)
@@ -140,9 +150,11 @@ if check_password():
                 match = df_config[(df_config['Categorie'] == cat) & (df_config['Option'] == opt)]
                 return str(match.iloc[0]['Script']) if not match.empty else ""
             
-            # Gestion d'erreur au cas où la sélection est vide suite au changement de mode
-            if sel_angle and sel_amb and sel_scen and sel_perso and sel_lum:
+            if sel_angle and sel_amb and sel_scen and sel_perso and sel_lum and sel_form and sel_style:
+                # TOUTES les variables (y compris Formats et Styles) sont maintenant ajoutées au texte !
                 p_final = (f"Produit: {sel_prod}. "
+                           f"Format: {get_s('Formats/Ratios', sel_form)}. "
+                           f"Style Photo: {get_s('Styles Photo', sel_style)}. "
                            f"Angle: {get_s('Angles', sel_angle)}. "
                            f"Ambiance: {get_s('Ambiances', sel_amb)}. "
                            f"Scénario: {get_s('Scénarios', sel_scen)}. "
